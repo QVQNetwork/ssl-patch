@@ -1,0 +1,115 @@
+From ed30a45497a045a4a93c6d295cf38f260f603822 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Thu, 23 Aug 2018 01:38:29 +0800
+Subject: [PATCH] max version: upgrade to tls1.3
+
+---
+ .gitignore               | 1 +
+ include/openssl/crypto.h | 2 +-
+ include/openssl/ssl.h    | 2 +-
+ ssl/s3_lib.cc            | 2 +-
+ ssl/ssl_test.cc          | 6 ++++--
+ ssl/ssl_versions.cc      | 2 +-
+ 6 files changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/.gitignore b/.gitignore
+index db50b0b..39e5b69 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,5 @@
+ build/
++.openssl/
+ ssl/test/runner/runner
+ *.swp
+ *.swo
+diff --git a/include/openssl/crypto.h b/include/openssl/crypto.h
+index d35cf71..4f4055d 100644
+--- a/include/openssl/crypto.h
++++ b/include/openssl/crypto.h
+@@ -67,7 +67,7 @@ OPENSSL_EXPORT int BORINGSSL_self_test(void);
+ 
+ // OPENSSL_VERSION_TEXT contains a string the identifies the version of
+ // “OpenSSL”. node.js requires a version number in this text.
+-#define OPENSSL_VERSION_TEXT "OpenSSL 1.1.0 (compatible; BoringSSL)"
++#define OPENSSL_VERSION_TEXT "OpenSSL 1.1.1 (compatible; BoringSSL)"
+ 
+ #define OPENSSL_VERSION 0
+ #define OPENSSL_CFLAGS 1
+diff --git a/include/openssl/ssl.h b/include/openssl/ssl.h
+index c2afa15..e435ea3 100644
+--- a/include/openssl/ssl.h
++++ b/include/openssl/ssl.h
+@@ -3385,7 +3385,7 @@ OPENSSL_EXPORT int SSL_total_renegotiations(const SSL *ssl);
+ // TODO(svaldez): Make |tls13_rfc| the default after callers are switched to
+ // explicitly enable |tls13_all|.
+ enum tls13_variant_t {
+-  tls13_default = 0,
++  tls13_default = 1,
+   tls13_draft23,
+   tls13_draft28,
+   tls13_rfc,
+diff --git a/ssl/s3_lib.cc b/ssl/s3_lib.cc
+index 0b24f94..0a3a93d 100644
+--- a/ssl/s3_lib.cc
++++ b/ssl/s3_lib.cc
+@@ -202,7 +202,7 @@ bool ssl3_new(SSL *ssl) {
+   // TODO(davidben): Move this field into |s3|, have it store the normalized
+   // protocol version, and implement this pre-negotiation quirk in |SSL_version|
+   // at the API boundary rather than in internal state.
+-  ssl->version = TLS1_2_VERSION;
++  ssl->version = TLS1_3_VERSION;
+   return true;
+ }
+ 
+diff --git a/ssl/ssl_test.cc b/ssl/ssl_test.cc
+index 74c4e9e..eadd02c 100644
+--- a/ssl/ssl_test.cc
++++ b/ssl/ssl_test.cc
+@@ -820,11 +820,13 @@ static void ExpectDefaultVersion(uint16_t min_version, uint16_t max_version,
+ 
+ TEST(SSLTest, DefaultVersion) {
+   // TODO(svaldez): Update this when TLS 1.3 is enabled by default.
++  ExpectDefaultVersion(TLS1_VERSION, TLS1_3_VERSION, &TLS_method);
+   ExpectDefaultVersion(TLS1_VERSION, TLS1_2_VERSION, &TLS_method);
+   ExpectDefaultVersion(TLS1_VERSION, TLS1_VERSION, &TLSv1_method);
+   ExpectDefaultVersion(TLS1_1_VERSION, TLS1_1_VERSION, &TLSv1_1_method);
+   ExpectDefaultVersion(TLS1_2_VERSION, TLS1_2_VERSION, &TLSv1_2_method);
+   ExpectDefaultVersion(TLS1_1_VERSION, TLS1_2_VERSION, &DTLS_method);
++  ExpectDefaultVersion(TLS1_1_VERSION, TLS1_3_VERSION, &DTLS_method);
+   ExpectDefaultVersion(TLS1_1_VERSION, TLS1_1_VERSION, &DTLSv1_method);
+   ExpectDefaultVersion(TLS1_2_VERSION, TLS1_2_VERSION, &DTLSv1_2_method);
+ }
+@@ -2591,7 +2593,7 @@ TEST(SSLTest, SetVersion) {
+ 
+   // Zero is the default version.
+   EXPECT_TRUE(SSL_CTX_set_max_proto_version(ctx.get(), 0));
+-  EXPECT_EQ(TLS1_2_VERSION, ctx->conf_max_version);
++  EXPECT_EQ(TLS1_3_VERSION, ctx->conf_max_version);
+   EXPECT_TRUE(SSL_CTX_set_min_proto_version(ctx.get(), 0));
+   EXPECT_EQ(TLS1_VERSION, ctx->conf_min_version);
+ 
+@@ -2625,7 +2627,7 @@ TEST(SSLTest, SetVersion) {
+   EXPECT_FALSE(SSL_CTX_set_min_proto_version(ctx.get(), 0x1234));
+ 
+   EXPECT_TRUE(SSL_CTX_set_max_proto_version(ctx.get(), 0));
+-  EXPECT_EQ(TLS1_2_VERSION, ctx->conf_max_version);
++  EXPECT_EQ(TLS1_3_VERSION, ctx->conf_max_version);
+   EXPECT_TRUE(SSL_CTX_set_min_proto_version(ctx.get(), 0));
+   EXPECT_EQ(TLS1_1_VERSION, ctx->conf_min_version);
+ }
+diff --git a/ssl/ssl_versions.cc b/ssl/ssl_versions.cc
+index 6f07b93..7819341 100644
+--- a/ssl/ssl_versions.cc
++++ b/ssl/ssl_versions.cc
+@@ -185,7 +185,7 @@ static bool set_max_version(const SSL_PROTOCOL_METHOD *method, uint16_t *out,
+                             uint16_t version) {
+   // Zero is interpreted as the default maximum version.
+   if (version == 0) {
+-    *out = TLS1_2_VERSION;
++    *out = TLS1_3_VERSION;
+     return true;
+   }
+ 
+-- 
+2.7.4
+
