@@ -51,6 +51,7 @@ fi
 
 cd $WORKDIRECTORY/boringssl
 git am $WORKDIRECTORY/0001-max-version-upgrade-to-tls1.3.patch
+git am $WORKDIRECTORY/0002-DO-NOT-MERGE-Version-Upgrade-to-OpenSSL-1.1.1-to-sup.patch
 mkdir $WORKDIRECTORY/boringssl/build
 cd $WORKDIRECTORY/boringssl/build
 cmake .. -DCMAKE_BUILD_TYPE=Release

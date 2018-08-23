@@ -1,0 +1,37 @@
+From 0f939e22dbb6493a4b9c2e6933fc8db0eb460b40 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Thu, 23 Aug 2018 11:01:08 +0800
+Subject: [PATCH 2/2] [DO NOT MERGE]Version: Upgrade to OpenSSL 1.1.1 to
+ support nginx use tls1.3
+
+---
+ .gitignore               | 1 +
+ include/openssl/crypto.h | 2 +-
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index db50b0b..39e5b69 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,5 @@
+ build/
++.openssl/
+ ssl/test/runner/runner
+ *.swp
+ *.swo
+diff --git a/include/openssl/crypto.h b/include/openssl/crypto.h
+index d35cf71..4f4055d 100644
+--- a/include/openssl/crypto.h
++++ b/include/openssl/crypto.h
+@@ -67,7 +67,7 @@ OPENSSL_EXPORT int BORINGSSL_self_test(void);
+ 
+ // OPENSSL_VERSION_TEXT contains a string the identifies the version of
+ // “OpenSSL”. node.js requires a version number in this text.
+-#define OPENSSL_VERSION_TEXT "OpenSSL 1.1.0 (compatible; BoringSSL)"
++#define OPENSSL_VERSION_TEXT "OpenSSL 1.1.1 (compatible; BoringSSL)"
+ 
+ #define OPENSSL_VERSION 0
+ #define OPENSSL_CFLAGS 1
+-- 
+2.7.4
+
