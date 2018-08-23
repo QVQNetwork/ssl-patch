@@ -1,0 +1,135 @@
+From 5d8b9e4c9bd5248c692651c76e69ff690882fddd Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Thu, 23 Aug 2018 16:00:11 +0800
+Subject: [PATCH 4/4] SSL: add identity hint config directive.
+
+Adds the directive "ssl_psk_identity_hint" to the ngx_http_ssl_module.
+This allows the user to specify the PSK identity hint given to the
+connecting client.
+Author:    Nate Karstens <nate.karstens@garmin.com>
+Date:      Wed Aug 23 21:03:57 2017 -0500
+---
+ contrib/vim/syntax/nginx.vim           |  1 +
+ src/event/ngx_event_openssl.c          | 11 ++++++++++-
+ src/event/ngx_event_openssl.h          |  3 ++-
+ src/http/modules/ngx_http_ssl_module.c | 15 ++++++++++++++-
+ src/http/modules/ngx_http_ssl_module.h |  1 +
+ 5 files changed, 28 insertions(+), 3 deletions(-)
+
+diff --git a/contrib/vim/syntax/nginx.vim b/contrib/vim/syntax/nginx.vim
+index 52c3f1b..beb8815 100644
+--- a/contrib/vim/syntax/nginx.vim
++++ b/contrib/vim/syntax/nginx.vim
+@@ -581,6 +581,7 @@ syn keyword ngxDirective contained ssl_prefer_server_ciphers
+ syn keyword ngxDirective contained ssl_preread
+ syn keyword ngxDirective contained ssl_protocols
+ syn keyword ngxDirective contained ssl_psk_file
++syn keyword ngxDirective contained ssl_psk_identity_hint
+ syn keyword ngxDirective contained ssl_session_cache
+ syn keyword ngxDirective contained ssl_session_ticket_key
+ syn keyword ngxDirective contained ssl_session_tickets
+diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
+index 5fde81a..fbb8abe 100644
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -1242,7 +1242,8 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
+ 
+ 
+ ngx_int_t
+-ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
++ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file,
++    ngx_str_t *identity_hint)
+ {
+ #ifdef PSK_MAX_IDENTITY_LEN
+ 
+@@ -1260,6 +1261,14 @@ ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
+         return NGX_ERROR;
+     }
+ 
++    if (SSL_CTX_use_psk_identity_hint(ssl->ctx, (char *) identity_hint->data)
++        == 0)
++    {
++        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
++                      "SSL_CTX_use_psk_identity_hint() failed");
++        return NGX_ERROR;
++    }
++
+     SSL_CTX_set_psk_server_callback(ssl->ctx, ngx_ssl_psk_callback);
+ 
+ #endif
+diff --git a/src/event/ngx_event_openssl.h b/src/event/ngx_event_openssl.h
+index df8e257..3660efb 100644
+--- a/src/event/ngx_event_openssl.h
++++ b/src/event/ngx_event_openssl.h
+@@ -190,7 +190,8 @@ ngx_int_t ngx_ssl_dhparam(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file);
+ ngx_int_t ngx_ssl_ecdh_curve(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *name);
+ ngx_int_t ngx_ssl_early_data(ngx_conf_t *cf, ngx_ssl_t *ssl,
+     ngx_uint_t enable);
+-ngx_int_t ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file);
++ngx_int_t ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file,
++    ngx_str_t *identity_hint);
+ ngx_int_t ngx_ssl_client_session_cache(ngx_conf_t *cf, ngx_ssl_t *ssl,
+     ngx_uint_t enable);
+ ngx_int_t ngx_ssl_session_cache(ngx_ssl_t *ssl, ngx_str_t *sess_ctx,
+diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
+index 964ff20..0d66707 100644
+--- a/src/http/modules/ngx_http_ssl_module.c
++++ b/src/http/modules/ngx_http_ssl_module.c
+@@ -288,6 +288,13 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
+       offsetof(ngx_http_ssl_srv_conf_t, psk_file),
+       NULL },
+ 
++    { ngx_string("ssl_psk_identity_hint"),
++      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
++      ngx_conf_set_str_slot,
++      NGX_HTTP_SRV_CONF_OFFSET,
++      offsetof(ngx_http_ssl_srv_conf_t, psk_identity_hint),
++      NULL },
++
+       ngx_null_command
+ };
+ 
+@@ -605,6 +612,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
+      *     sscf->stapling_file = { 0, NULL };
+      *     sscf->stapling_responder = { 0, NULL };
+      *     sscf->psk_file = { 0, NULL };
++     *     sscf->psk_identity_hint = { 0, NULL };
+      */
+ 
+     sscf->enable = NGX_CONF_UNSET;
+@@ -709,6 +717,8 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+                              40);
+ 
+     ngx_conf_merge_str_value(conf->psk_file, prev->psk_file, "");
++    ngx_conf_merge_str_value(conf->psk_identity_hint,
++                         prev->psk_identity_hint, "");
+ 
+     conf->ssl.log = cf->log;
+ 
+@@ -916,7 +926,10 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+         conf->ssl.dyn_rec.timeout = 0;
+     }
+ 
+-    if (ngx_ssl_psk_file(cf, &conf->ssl, &conf->psk_file) != NGX_OK) {
++    if (ngx_ssl_psk_file(cf, &conf->ssl, &conf->psk_file,
++                         &conf->psk_identity_hint)
++        != NGX_OK)
++    {
+         return NGX_CONF_ERROR;
+     }
+ 
+diff --git a/src/http/modules/ngx_http_ssl_module.h b/src/http/modules/ngx_http_ssl_module.h
+index d30c257..04d7bd1 100644
+--- a/src/http/modules/ngx_http_ssl_module.h
++++ b/src/http/modules/ngx_http_ssl_module.h
+@@ -57,6 +57,7 @@ typedef struct {
+     ngx_str_t                       stapling_responder;
+ 
+     ngx_str_t                       psk_file;
++    ngx_str_t                       psk_identity_hint;
+ 
+     u_char                         *file;
+     ngx_uint_t                      line;
+-- 
+2.7.4
+

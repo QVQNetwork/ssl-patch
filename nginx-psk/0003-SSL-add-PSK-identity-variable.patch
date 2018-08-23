@@ -1,0 +1,87 @@
+From 4ed36129e9e375e41f86017765bad038c9e5a125 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Thu, 23 Aug 2018 15:42:33 +0800
+Subject: [PATCH 3/4] SSL: add PSK identity variable.
+
+Adds the variable $ssl_psk_identity to get the PSK identity
+used in a connnection secured with a PSK cipher suite.
+Author:    Nate Karstens <nate.karstens@garmin.com>
+Date:      Wed Aug 23 21:03:31 2017 -0500
+---
+ src/event/ngx_event_openssl.c          | 31 +++++++++++++++++++++++++++++++
+ src/event/ngx_event_openssl.h          |  2 ++
+ src/http/modules/ngx_http_ssl_module.c |  3 +++
+ 3 files changed, 36 insertions(+)
+
+diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
+index f57bfc0..5fde81a 100644
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -4510,6 +4510,37 @@ ngx_ssl_parse_time(
+ }
+ 
+ 
++ngx_int_t
++ngx_ssl_get_psk_identity(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
++{
++#ifdef PSK_MAX_IDENTITY_LEN
++
++    size_t       len;
++    const char  *identity;
++
++    identity = SSL_get_psk_identity(c->ssl->connection);
++
++    if (identity) {
++        len = ngx_strlen(identity);
++
++        s->len = len;
++        s->data = ngx_pnalloc(pool, len);
++        if (s->data == NULL) {
++            return NGX_ERROR;
++        }
++
++        ngx_memcpy(s->data, identity, len);
++            
++        return NGX_OK;
++    }
++
++#endif
++
++    s->len = 0;
++    return NGX_OK;
++}
++
++
+ static void *
+ ngx_openssl_create_conf(ngx_cycle_t *cycle)
+ {
+diff --git a/src/event/ngx_event_openssl.h b/src/event/ngx_event_openssl.h
+index 3de9b95..df8e257 100644
+--- a/src/event/ngx_event_openssl.h
++++ b/src/event/ngx_event_openssl.h
+@@ -263,6 +263,8 @@ ngx_int_t ngx_ssl_get_client_v_end(ngx_connection_t *c, ngx_pool_t *pool,
+     ngx_str_t *s);
+ ngx_int_t ngx_ssl_get_client_v_remain(ngx_connection_t *c, ngx_pool_t *pool,
+     ngx_str_t *s);
++ngx_int_t ngx_ssl_get_psk_identity(ngx_connection_t *c, ngx_pool_t *pool,
++    ngx_str_t *s);
+ 
+ 
+ ngx_int_t ngx_ssl_handshake(ngx_connection_t *c);
+diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
+index b84a6d4..964ff20 100644
+--- a/src/http/modules/ngx_http_ssl_module.c
++++ b/src/http/modules/ngx_http_ssl_module.c
+@@ -391,6 +391,9 @@ static ngx_http_variable_t  ngx_http_ssl_vars[] = {
+     { ngx_string("ssl_client_v_remain"), NULL, ngx_http_ssl_variable,
+       (uintptr_t) ngx_ssl_get_client_v_remain, NGX_HTTP_VAR_CHANGEABLE, 0 },
+ 
++    { ngx_string("ssl_psk_identity"), NULL, ngx_http_ssl_variable,
++      (uintptr_t) ngx_ssl_get_psk_identity, NGX_HTTP_VAR_CHANGEABLE, 0 },
++
+       ngx_http_null_variable
+ };
+ 
+-- 
+2.7.4
+

@@ -1,0 +1,359 @@
+From bf2c4317b9062440a8bf090d5dd931e15a511294 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Thu, 23 Aug 2018 15:04:24 +0800
+Subject: [PATCH 2/4] SSL: add support for PSK cipher suites.
+
+Adds support for TLS connections using PSK cipher suites. A new
+configuration directive, ssl_psk_file, specifies the file that
+contains a list of identities and associated PSKs. Each line of
+the file begins with the identity, followed by a colon character
+(':'), and ending with the PSK. As required by RFC 4279 section
+5.4, PSKs may be entered either as plain text or using hexadecimal
+encoding. Hexadecimal PSKs must begin with "{HEX}". PSKs without
+this prefix are assumed to be plain text, but they may optionally
+begin with "{PLAIN}" to denote this. Some examples:
+
+gary:plain_text_password
+min:{PLAIN}another_text_password
+cliff:{HEX}ab0123CD
+
+PSK functionality can be easily tested with the OpenSSL s_client
+using the "-psk" and "-psk_identity" options.
+
+Author:    Nate Karstens <nate.karstens@garmin.com>
+Date:      Wed Aug 23 21:00:59 2017 -0500
+---
+ contrib/vim/syntax/nginx.vim           |   1 +
+ src/event/ngx_event_openssl.c          | 187 +++++++++++++++++++++++++++++++++
+ src/event/ngx_event_openssl.h          |   2 +
+ src/http/modules/ngx_http_ssl_module.c |  14 +++
+ src/http/modules/ngx_http_ssl_module.h |   2 +
+ 5 files changed, 206 insertions(+)
+
+diff --git a/contrib/vim/syntax/nginx.vim b/contrib/vim/syntax/nginx.vim
+index 075b19a..52c3f1b 100644
+--- a/contrib/vim/syntax/nginx.vim
++++ b/contrib/vim/syntax/nginx.vim
+@@ -580,6 +580,7 @@ syn keyword ngxDirective contained ssl_password_file
+ syn keyword ngxDirective contained ssl_prefer_server_ciphers
+ syn keyword ngxDirective contained ssl_preread
+ syn keyword ngxDirective contained ssl_protocols
++syn keyword ngxDirective contained ssl_psk_file
+ syn keyword ngxDirective contained ssl_session_cache
+ syn keyword ngxDirective contained ssl_session_ticket_key
+ syn keyword ngxDirective contained ssl_session_tickets
+diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
+index 82ed59c..f57bfc0 100644
+--- a/src/event/ngx_event_openssl.c
++++ b/src/event/ngx_event_openssl.c
+@@ -11,6 +11,7 @@
+ 
+ 
+ #define NGX_SSL_PASSWORD_BUFFER_SIZE  4096
++#define NGX_SSL_PSK_BUFFER_SIZE       4096
+ 
+ 
+ typedef struct {
+@@ -24,6 +25,10 @@ static int ngx_ssl_verify_callback(int ok, X509_STORE_CTX *x509_store);
+ static void ngx_ssl_info_callback(const ngx_ssl_conn_t *ssl_conn, int where,
+     int ret);
+ static void ngx_ssl_passwords_cleanup(void *data);
++#ifdef PSK_MAX_IDENTITY_LEN
++static unsigned int ngx_ssl_psk_callback(ngx_ssl_conn_t *ssl_conn,
++    const char *identity, unsigned char *psk, unsigned int max_psk_len);
++#endif
+ static int ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn,
+     ngx_ssl_session_t *sess);
+ static void ngx_ssl_handshake_handler(ngx_event_t *ev);
+@@ -111,6 +116,7 @@ int  ngx_ssl_connection_index;
+ int  ngx_ssl_server_conf_index;
+ int  ngx_ssl_session_cache_index;
+ int  ngx_ssl_session_ticket_keys_index;
++int  ngx_ssl_psk_index;
+ int  ngx_ssl_certificate_index;
+ int  ngx_ssl_next_certificate_index;
+ int  ngx_ssl_certificate_name_index;
+@@ -196,6 +202,14 @@ ngx_ssl_init(ngx_log_t *log)
+         return NGX_ERROR;
+     }
+ 
++    ngx_ssl_psk_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
++
++    if (ngx_ssl_psk_index == -1) {
++        ngx_ssl_error(NGX_LOG_ALERT, log, 0,
++                      "SSL_CTX_get_ex_new_index() failed");
++        return NGX_ERROR;
++    }
++
+     ngx_ssl_certificate_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL,
+                                                          NULL);
+     if (ngx_ssl_certificate_index == -1) {
+@@ -1228,6 +1242,176 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
+ 
+ 
+ ngx_int_t
++ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
++{
++#ifdef PSK_MAX_IDENTITY_LEN
++
++    if (file->len == 0) {
++        return NGX_OK;
++    }
++
++    if (ngx_conf_full_name(cf->cycle, file, 1) != NGX_OK) {
++        return NGX_ERROR;
++    }
++
++    if (SSL_CTX_set_ex_data(ssl->ctx, ngx_ssl_psk_index, file) == 0) {
++        ngx_ssl_error(NGX_LOG_EMERG, ssl->log, 0,
++                      "SSL_CTX_set_ex_data() failed");
++        return NGX_ERROR;
++    }
++
++    SSL_CTX_set_psk_server_callback(ssl->ctx, ngx_ssl_psk_callback);
++
++#endif
++
++    return NGX_OK;
++}
++
++
++#ifdef PSK_MAX_IDENTITY_LEN
++
++static unsigned int
++ngx_ssl_psk_callback(ngx_ssl_conn_t *ssl_conn, const char *identity,
++    unsigned char *psk, unsigned int max_psk_len)
++{
++    u_char            *p, *last, *end, *colon;
++    size_t             len;
++    ssize_t            n;
++    SSL_CTX           *ssl_ctx;
++    ngx_fd_t           fd;
++    ngx_str_t         *file;
++    unsigned int       psk_len;
++    ngx_connection_t  *c;
++    u_char             buf[NGX_SSL_PSK_BUFFER_SIZE];
++
++    c = ngx_ssl_get_connection(ssl_conn);
++
++    ngx_log_debug0(NGX_LOG_DEBUG_EVENT, c->log, 0, "ssl psk callback");
++
++    ssl_ctx = SSL_get_SSL_CTX(ssl_conn);
++    file = SSL_CTX_get_ex_data(ssl_ctx, ngx_ssl_psk_index);
++
++    fd = ngx_open_file(file->data, NGX_FILE_RDONLY, NGX_FILE_OPEN, 0);
++    if (fd == NGX_INVALID_FILE) {
++        ngx_log_error(NGX_LOG_ERR, c->log, ngx_errno,
++                      ngx_open_file_n " \"%V\" failed", file);
++        return 0;
++    }
++
++    psk_len = 0;
++
++    len = 0;
++    last = buf;
++
++    do {
++        n = ngx_read_fd(fd, last, NGX_SSL_PSK_BUFFER_SIZE - len);
++
++        if (n == -1) {
++            ngx_log_error(NGX_LOG_ERR, c->log, ngx_errno,
++                          ngx_read_fd_n " \"%V\" failed", file);
++            goto cleanup;
++        }
++
++        end = last + n;
++
++        if (len && n == 0) {
++            *end++ = LF;
++        }
++
++        for (p = buf; /* void */; p = last) {
++            last = ngx_strlchr(last, end, LF);
++
++            if (last == NULL) {
++                break;
++            }
++
++            len = last++ - p;
++
++            if (len && p[len - 1] == CR) {
++                len--;
++            }
++
++            if (len == 0) {
++                continue;
++            }
++
++            colon = ngx_strlchr(p, p + len, ':');
++
++            if (colon == NULL) {
++                continue;
++            }
++
++            *colon = '\0';
++
++            if (ngx_strcmp(p, identity) != 0) {
++                continue;
++            }
++
++            len -= colon + 1 - p;
++            p = colon + 1;
++
++            if (ngx_strncmp(p, "{HEX}", sizeof("{HEX}") - 1) == 0) {
++
++                p += sizeof("{HEX}") - 1;
++                len -= sizeof("{HEX}") - 1;
++
++                if (len / 2 > max_psk_len) {
++                    goto cleanup;
++                }
++
++                if (ngx_hex_decode(psk, p, len) != NGX_OK) {
++                    ngx_memzero(psk, len / 2);
++                    goto cleanup;
++                }
++
++                psk_len = len / 2;
++
++                goto cleanup;
++
++            } else if (ngx_strncmp(p, "{PLAIN}", sizeof("{PLAIN}") - 1) == 0) {
++                p += sizeof("{PLAIN}") - 1;
++                len -= sizeof("{PLAIN}") - 1;
++            }
++
++            if (len > max_psk_len) {
++                goto cleanup;
++            }
++
++            ngx_memcpy(psk, p, len);
++            psk_len = len;
++
++            goto cleanup;
++        }
++
++        len = end - p;
++
++        if (len == NGX_SSL_PSK_BUFFER_SIZE) {
++            ngx_log_error(NGX_LOG_ERR, c->log, 0,
++                          "too long line in \"%V\"", file);
++            goto cleanup;
++        }
++
++        ngx_memmove(buf, p, len);
++        last = buf + len;
++
++    } while (n != 0);
++
++cleanup:
++
++    if (ngx_close_file(fd) == NGX_FILE_ERROR) {
++        ngx_log_error(NGX_LOG_ALERT, c->log, ngx_errno,
++                      ngx_close_file_n " %V failed", file);
++    }
++
++    ngx_memzero(buf, NGX_SSL_PSK_BUFFER_SIZE);
++
++    return psk_len;
++}
++
++#endif
++
++
++ngx_int_t
+ ngx_ssl_create_connection(ngx_ssl_t *ssl, ngx_connection_t *c, ngx_uint_t flags)
+ {
+     ngx_ssl_connection_t  *sc;
+@@ -2206,6 +2390,9 @@ ngx_ssl_connection_error(ngx_connection_t *c, int sslerr, ngx_err_t err,
+             || n == SSL_R_NO_COMPRESSION_SPECIFIED                   /*  187 */
+             || n == SSL_R_NO_SHARED_CIPHER                           /*  193 */
+             || n == SSL_R_RECORD_LENGTH_MISMATCH                     /*  213 */
++#ifdef SSL_R_PSK_IDENTITY_NOT_FOUND
++            || n == SSL_R_PSK_IDENTITY_NOT_FOUND                     /*  223 */
++#endif
+ #ifdef SSL_R_PARSE_TLSEXT
+             || n == SSL_R_PARSE_TLSEXT                               /*  227 */
+ #endif
+diff --git a/src/event/ngx_event_openssl.h b/src/event/ngx_event_openssl.h
+index a5c5ac1..3de9b95 100644
+--- a/src/event/ngx_event_openssl.h
++++ b/src/event/ngx_event_openssl.h
+@@ -190,6 +190,7 @@ ngx_int_t ngx_ssl_dhparam(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file);
+ ngx_int_t ngx_ssl_ecdh_curve(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *name);
+ ngx_int_t ngx_ssl_early_data(ngx_conf_t *cf, ngx_ssl_t *ssl,
+     ngx_uint_t enable);
++ngx_int_t ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file);
+ ngx_int_t ngx_ssl_client_session_cache(ngx_conf_t *cf, ngx_ssl_t *ssl,
+     ngx_uint_t enable);
+ ngx_int_t ngx_ssl_session_cache(ngx_ssl_t *ssl, ngx_str_t *sess_ctx,
+@@ -281,6 +282,7 @@ extern int  ngx_ssl_connection_index;
+ extern int  ngx_ssl_server_conf_index;
+ extern int  ngx_ssl_session_cache_index;
+ extern int  ngx_ssl_session_ticket_keys_index;
++extern int  ngx_ssl_psk_index;
+ extern int  ngx_ssl_certificate_index;
+ extern int  ngx_ssl_next_certificate_index;
+ extern int  ngx_ssl_certificate_name_index;
+diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
+index c2d21e8..b84a6d4 100644
+--- a/src/http/modules/ngx_http_ssl_module.c
++++ b/src/http/modules/ngx_http_ssl_module.c
+@@ -281,6 +281,13 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
+       offsetof(ngx_http_ssl_srv_conf_t, dyn_rec_threshold),
+       NULL },
+ 
++    { ngx_string("ssl_psk_file"),
++      NGX_HTTP_MAIN_CONF|NGX_HTTP_SRV_CONF|NGX_CONF_TAKE1,
++      ngx_conf_set_str_slot,
++      NGX_HTTP_SRV_CONF_OFFSET,
++      offsetof(ngx_http_ssl_srv_conf_t, psk_file),
++      NULL },
++
+       ngx_null_command
+ };
+ 
+@@ -594,6 +601,7 @@ ngx_http_ssl_create_srv_conf(ngx_conf_t *cf)
+      *     sscf->shm_zone = NULL;
+      *     sscf->stapling_file = { 0, NULL };
+      *     sscf->stapling_responder = { 0, NULL };
++     *     sscf->psk_file = { 0, NULL };
+      */
+ 
+     sscf->enable = NGX_CONF_UNSET;
+@@ -697,6 +705,8 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+     ngx_conf_merge_uint_value(conf->dyn_rec_threshold, prev->dyn_rec_threshold,
+                              40);
+ 
++    ngx_conf_merge_str_value(conf->psk_file, prev->psk_file, "");
++
+     conf->ssl.log = cf->log;
+ 
+     if (conf->enable) {
+@@ -903,6 +913,10 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+         conf->ssl.dyn_rec.timeout = 0;
+     }
+ 
++    if (ngx_ssl_psk_file(cf, &conf->ssl, &conf->psk_file) != NGX_OK) {
++        return NGX_CONF_ERROR;
++    }
++
+     return NGX_CONF_OK;
+ }
+ 
+diff --git a/src/http/modules/ngx_http_ssl_module.h b/src/http/modules/ngx_http_ssl_module.h
+index deeadc3..d30c257 100644
+--- a/src/http/modules/ngx_http_ssl_module.h
++++ b/src/http/modules/ngx_http_ssl_module.h
+@@ -56,6 +56,8 @@ typedef struct {
+     ngx_str_t                       stapling_file;
+     ngx_str_t                       stapling_responder;
+ 
++    ngx_str_t                       psk_file;
++
+     u_char                         *file;
+     ngx_uint_t                      line;
+ 
+-- 
+2.7.4
+
