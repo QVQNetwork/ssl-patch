@@ -64,5 +64,5 @@ ln $WORKDIRECTORY/boringssl/include/openssl/* .
 mkdir $WORKDIRECTORY/boringssl/.openssl/lib
 cp $WORKDIRECTORY/boringssl/build/crypto/libcrypto.a $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.a
 cp $WORKDIRECTORY/boringssl/build/ssl/libssl.a $WORKDIRECTORY/boringssl/.openssl/lib/libssl.a
-echo "Configure nginx with \"--with-openssl=$WORKDIRECTORY/boringssl\""
+echo "Configure nginx with \"--with-openssl=$WORKDIRECTORY/boringssl\". Use nginx version >= 1.15.3 for best result."
 echo "Run \"touch /root/ssl-patch/boringssl/.openssl/include/openssl/ssl.h\" AFTER you encountered a build error"
