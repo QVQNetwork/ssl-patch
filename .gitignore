@@ -1,2 +1,2 @@
-boringssl/
-go/
+boringssl/boringssl/
+boringssl/go/
