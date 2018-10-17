@@ -1,0 +1,15 @@
+# Ciphers
+ssl_ciphers [CHACHA20|AESGCM];
+
+# Early Data
+ssl_early_data on;
+proxy_set_header Early-Data $ssl_early_data;
+
+# ECDHE Ciphers
+ssl_ecdh_curve secp521r1;
+
+# Preferred Server Ciphers
+ssl_prefer_server_ciphers on;
+
+# SSL Version
+ssl_protocols TLSv1.2 TLSv1.3;
