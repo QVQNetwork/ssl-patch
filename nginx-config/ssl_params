@@ -6,7 +6,7 @@ ssl_early_data on;
 proxy_set_header Early-Data $ssl_early_data;
 
 # ECDHE Ciphers
-ssl_ecdh_curve secp521r1;
+ssl_ecdh_curve secp384r1;
 
 # Preferred Server Ciphers
 ssl_prefer_server_ciphers on;
