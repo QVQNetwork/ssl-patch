@@ -1,6 +1,6 @@
-From b316310741c5cb1ce59d564069b5e061dfe8cac2 Mon Sep 17 00:00:00 2001
+From 59994889a8ae77dc874b68e631d264e294bfbb4f Mon Sep 17 00:00:00 2001
 From: lrinQVQ <cqlrin@gmail.com>
-Date: Sat, 13 Oct 2018 10:14:23 +0800
+Date: Wed, 17 Oct 2018 10:40:27 +0800
 Subject: [PATCH 4/4] SSL: add identity hint config directive.
 
 Adds the directive "ssl_psk_identity_hint" to the ngx_http_ssl_module.
@@ -30,11 +30,11 @@ index 52c3f1b3..beb88158 100644
  syn keyword ngxDirective contained ssl_session_ticket_key
  syn keyword ngxDirective contained ssl_session_tickets
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index 0e34ac15..83ee8c5b 100644
+index 78328de9..b8cd7cf8 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
-@@ -1269,7 +1269,8 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
- }
+@@ -1270,7 +1270,8 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
+ 
  
  ngx_int_t
 -ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
@@ -43,7 +43,7 @@ index 0e34ac15..83ee8c5b 100644
  {
  #ifdef PSK_MAX_IDENTITY_LEN
  
-@@ -1287,6 +1288,14 @@ ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
+@@ -1284,6 +1285,14 @@ ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
          return NGX_ERROR;
      }
  
@@ -73,7 +73,7 @@ index 898aef3e..3b8afc24 100644
      ngx_uint_t enable);
  ngx_int_t ngx_ssl_session_cache(ngx_ssl_t *ssl, ngx_str_t *sess_ctx,
 diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
-index 37db144f..7e70bb4d 100644
+index f4f67886..1adee35f 100644
 --- a/src/http/modules/ngx_http_ssl_module.c
 +++ b/src/http/modules/ngx_http_ssl_module.c
 @@ -253,6 +253,13 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
@@ -107,7 +107,7 @@ index 37db144f..7e70bb4d 100644
  
      conf->ssl.log = cf->log;
  
-@@ -883,7 +893,10 @@ ngx_http_ssl_password_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -840,7 +850,10 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
          return NGX_CONF_ERROR;
      }
  

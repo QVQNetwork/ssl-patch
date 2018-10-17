@@ -1,6 +1,6 @@
-From 155f65c6f8d81951872b02e0aa91b0dec98d8444 Mon Sep 17 00:00:00 2001
+From 4e9b53e59963e59146cbb45af59b12d8152308cf Mon Sep 17 00:00:00 2001
 From: lrinQVQ <cqlrin@gmail.com>
-Date: Sat, 13 Oct 2018 10:09:28 +0800
+Date: Wed, 17 Oct 2018 10:33:38 +0800
 Subject: [PATCH 3/4] SSL: add PSK identity variable.
 
 Adds the variable $ssl_psk_identity to get the PSK identity
@@ -9,18 +9,18 @@ used in a connnection secured with a PSK cipher suite.
 Author:    Nate Karstens <nate.karstens@garmin.com>
 Date:      Wed Aug 23 21:03:31 2017 -0500
 ---
- src/event/ngx_event_openssl.c          | 30 ++++++++++++++++++++++++++
+ src/event/ngx_event_openssl.c          | 31 ++++++++++++++++++++++++++
  src/event/ngx_event_openssl.h          |  2 ++
  src/http/modules/ngx_http_ssl_module.c |  3 +++
- 3 files changed, 35 insertions(+)
+ 3 files changed, 36 insertions(+)
 
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index dbf6829d..0e34ac15 100644
+index c2e4892f..78328de9 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
-@@ -4928,6 +4928,36 @@ ngx_ssl_parse_time(
-     return time;
+@@ -4924,6 +4924,37 @@ ngx_ssl_parse_time(
  }
+ 
  
 +ngx_int_t
 +ngx_ssl_get_psk_identity(ngx_connection_t *c, ngx_pool_t *pool, ngx_str_t *s)
@@ -52,9 +52,10 @@ index dbf6829d..0e34ac15 100644
 +    return NGX_OK;
 +}
 +
- 
++
  static void *
  ngx_openssl_create_conf(ngx_cycle_t *cycle)
+ {
 diff --git a/src/event/ngx_event_openssl.h b/src/event/ngx_event_openssl.h
 index a894e920..898aef3e 100644
 --- a/src/event/ngx_event_openssl.h
@@ -69,7 +70,7 @@ index a894e920..898aef3e 100644
  
  ngx_int_t ngx_ssl_handshake(ngx_connection_t *c);
 diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
-index 8579cfa0..37db144f 100644
+index 152c460c..f4f67886 100644
 --- a/src/http/modules/ngx_http_ssl_module.c
 +++ b/src/http/modules/ngx_http_ssl_module.c
 @@ -356,6 +356,9 @@ static ngx_http_variable_t  ngx_http_ssl_vars[] = {

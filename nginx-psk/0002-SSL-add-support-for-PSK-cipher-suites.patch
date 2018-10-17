@@ -1,6 +1,6 @@
-From 2cb42d0346567ad7ad51e4b97eb82dc5233f0040 Mon Sep 17 00:00:00 2001
+From c6f2bc8f34a9e40eccb1b9f10fda7934c3af606a Mon Sep 17 00:00:00 2001
 From: lrinQVQ <cqlrin@gmail.com>
-Date: Sat, 13 Oct 2018 10:06:39 +0800
+Date: Wed, 17 Oct 2018 10:28:24 +0800
 Subject: [PATCH 2/4] SSL: add support for PSK cipher suites.
 
 Adds support for TLS connections using PSK cipher suites. A new
@@ -24,11 +24,11 @@ Author:    Nate Karstens <nate.karstens@garmin.com>
 Date:      Wed Aug 23 21:00:59 2017 -0500
 ---
  contrib/vim/syntax/nginx.vim           |   1 +
- src/event/ngx_event_openssl.c          | 186 +++++++++++++++++++++++++
+ src/event/ngx_event_openssl.c          | 181 +++++++++++++++++++++++++
  src/event/ngx_event_openssl.h          |   2 +
  src/http/modules/ngx_http_ssl_module.c |  14 ++
  src/http/modules/ngx_http_ssl_module.h |   2 +
- 5 files changed, 205 insertions(+)
+ 5 files changed, 200 insertions(+)
 
 diff --git a/contrib/vim/syntax/nginx.vim b/contrib/vim/syntax/nginx.vim
 index 075b19a0..52c3f1b3 100644
@@ -43,7 +43,7 @@ index 075b19a0..52c3f1b3 100644
  syn keyword ngxDirective contained ssl_session_ticket_key
  syn keyword ngxDirective contained ssl_session_tickets
 diff --git a/src/event/ngx_event_openssl.c b/src/event/ngx_event_openssl.c
-index 75129134..dbf6829d 100644
+index 75129134..c2e4892f 100644
 --- a/src/event/ngx_event_openssl.c
 +++ b/src/event/ngx_event_openssl.c
 @@ -11,6 +11,7 @@
@@ -88,18 +88,14 @@ index 75129134..dbf6829d 100644
      ngx_ssl_certificate_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL,
                                                           NULL);
      if (ngx_ssl_certificate_index == -1) {
-@@ -1254,6 +1268,175 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
-     return 0;
+@@ -1255,6 +1269,170 @@ ngx_ssl_new_client_session(ngx_ssl_conn_t *ssl_conn, ngx_ssl_session_t *sess)
  }
+ 
  
 +ngx_int_t
 +ngx_ssl_psk_file(ngx_conf_t *cf, ngx_ssl_t *ssl, ngx_str_t *file)
 +{
 +#ifdef PSK_MAX_IDENTITY_LEN
-+
-+    if (file->len == 0) {
-+        return NGX_OK;
-+    }
 +
 +    if (ngx_conf_full_name(cf->cycle, file, 1) != NGX_OK) {
 +        return NGX_ERROR;
@@ -136,8 +132,6 @@ index 75129134..dbf6829d 100644
 +    u_char             buf[NGX_SSL_PSK_BUFFER_SIZE];
 +
 +    c = ngx_ssl_get_connection(ssl_conn);
-+
-+    ngx_log_debug0(NGX_LOG_DEBUG_EVENT, c->log, 0, "ssl psk callback");
 +
 +    ssl_ctx = SSL_get_SSL_CTX(ssl_conn);
 +    file = SSL_CTX_get_ex_data(ssl_ctx, ngx_ssl_psk_index);
@@ -261,10 +255,11 @@ index 75129134..dbf6829d 100644
 +
 +#endif
 +
- 
++
  ngx_int_t
  ngx_ssl_create_connection(ngx_ssl_t *ssl, ngx_connection_t *c, ngx_uint_t flags)
-@@ -2605,6 +2788,9 @@ ngx_ssl_connection_error(ngx_connection_t *c, int sslerr, ngx_err_t err,
+ {
+@@ -2605,6 +2783,9 @@ ngx_ssl_connection_error(ngx_connection_t *c, int sslerr, ngx_err_t err,
              || n == SSL_R_NO_COMPRESSION_SPECIFIED                   /*  187 */
              || n == SSL_R_NO_SHARED_CIPHER                           /*  193 */
              || n == SSL_R_RECORD_LENGTH_MISMATCH                     /*  213 */
@@ -295,7 +290,7 @@ index abd84ccf..a894e920 100644
  extern int  ngx_ssl_next_certificate_index;
  extern int  ngx_ssl_certificate_name_index;
 diff --git a/src/http/modules/ngx_http_ssl_module.c b/src/http/modules/ngx_http_ssl_module.c
-index 9e243ea0..8579cfa0 100644
+index 9e243ea0..152c460c 100644
 --- a/src/http/modules/ngx_http_ssl_module.c
 +++ b/src/http/modules/ngx_http_ssl_module.c
 @@ -246,6 +246,13 @@ static ngx_command_t  ngx_http_ssl_commands[] = {
@@ -329,7 +324,7 @@ index 9e243ea0..8579cfa0 100644
      conf->ssl.log = cf->log;
  
      if (conf->enable) {
-@@ -870,6 +880,10 @@ ngx_http_ssl_password_file(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+@@ -827,6 +837,10 @@ ngx_http_ssl_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
          return NGX_CONF_ERROR;
      }
  
