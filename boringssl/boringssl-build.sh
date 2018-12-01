@@ -32,6 +32,9 @@ fi
 if [ "$ARCH" = "armv6l" ]; then
 GOURL=`curl -so- https://golang.org/dl/ | grep -oP 'https:\/\/dl\.google\.com\/go\/go([0-9\.]+)\.linux-armv6l\.tar\.gz' | head -n 1`
 fi
+if [ "$ARCH" = "armv7l" ]; then
+GOURL=`curl -so- https://golang.org/dl/ | grep -oP 'https:\/\/dl\.google\.com\/go\/go([0-9\.]+)\.linux-armv6l\.tar\.gz' | head -n 1`
+fi
 echo "Downloading golang"
 curl -so $WORKDIRECTORY/go.tar.gz $GOURL
 tar -xzf $WORKDIRECTORY/go.tar.gz
