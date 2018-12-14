@@ -59,6 +59,10 @@ mkdir $WORKDIRECTORY/boringssl/build
 cd $WORKDIRECTORY/boringssl/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j`nproc`
+mkdir $WORKDIRECTORY/boringssl/build2
+cd $WORKDIRECTORY/boringssl/build2
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1
+make -j`nproc`
 mkdir $WORKDIRECTORY/boringssl/.openssl
 mkdir $WORKDIRECTORY/boringssl/.openssl/include
 mkdir $WORKDIRECTORY/boringssl/.openssl/include/openssl
@@ -67,5 +71,7 @@ ln $WORKDIRECTORY/boringssl/include/openssl/* .
 mkdir $WORKDIRECTORY/boringssl/.openssl/lib
 cp $WORKDIRECTORY/boringssl/build/crypto/libcrypto.a $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.a
 cp $WORKDIRECTORY/boringssl/build/ssl/libssl.a $WORKDIRECTORY/boringssl/.openssl/lib/libssl.a
+cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
+cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
 echo "Configure nginx with \"--with-openssl=$WORKDIRECTORY/boringssl\". Use nginx version >= 1.15 for best result."
 echo "Run \"touch $WORKDIRECTORY/boringssl/.openssl/include/openssl/ssl.h\" AFTER you encountered a build error"
