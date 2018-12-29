@@ -13,3 +13,10 @@ ssl_prefer_server_ciphers on;
 
 # SSL Version
 ssl_protocols TLSv1.2 TLSv1.3;
+
+# OCSP
+ssl_stapling_verify on;
+
+# SSL Session Cache
+ssl_session_cache   shared:SSL:10m;
+ssl_session_timeout 10m;
