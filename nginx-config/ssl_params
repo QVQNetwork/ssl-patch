@@ -14,6 +14,18 @@ ssl_prefer_server_ciphers on;
 # SSL Version
 ssl_protocols TLSv1.2 TLSv1.3;
 
+# HSTS
+#add_header Strict-Transport-Security "max-age=63072000" always;
+
+# HSTS SubDomains
+#add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+
+# HSTS preload
+#add_header Strict-Transport-Security "max-age=63072000; preload" always;
+
+# HSTS SubDomains preload
+add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
 # OCSP
 ssl_stapling_verify on;
 

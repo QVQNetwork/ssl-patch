@@ -1,0 +1,16 @@
+modsecurity on;
+modsecurity_rules_file /etc/modsecurity.conf;
+
+#Prevention Clickjacking
+add_header X-Frame-Options SAMEORIGIN;
+
+#Disable specify content-type sniffing
+#location ~* \.($content-type[|$content-type])$ {
+#add_header X-Content-Type-Options nosniff;
+#}
+
+# XSS filter
+add_header X-XSS-Protection "1; mode=block";
+
+# Content Security Policy
+#add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; img-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-src 'self'; connect-src 'self'; media-src 'self'; sandbox allow-scripts allow-same-origin; object-src 'self'; child-src 'self'; form-action 'self'; frame-ancestors 'self';" always;
