@@ -1,5 +1,6 @@
-modsecurity on;
-modsecurity_rules_file /etc/modsecurity.conf;
+#If you use modsecurity,please manually configure modsecurity
+#modsecurity on;
+#modsecurity_rules_file /etc/modsecurity.conf;
 
 #Prevention Clickjacking
 add_header X-Frame-Options SAMEORIGIN;
