@@ -1,14 +1,14 @@
-From 07e2c8a2c2b446c97e4f668404c3f1d6343eb401 Mon Sep 17 00:00:00 2001
+From 345967dc8a276f36b5293e521595ccff56ac4377 Mon Sep 17 00:00:00 2001
 From: lrinQVQ <cqlrin@gmail.com>
 Date: Wed, 9 Jan 2019 16:33:21 +0800
-Subject: [PATCH 3/3] ignore generated directory
+Subject: [PATCH 2/2] ignore generated directory
 
 ---
  .gitignore | 2 ++
  1 file changed, 2 insertions(+)
 
 diff --git a/.gitignore b/.gitignore
-index 9cb725188..51fc588f1 100644
+index 79deb06c7..cc9fa0d56 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -1,4 +1,6 @@

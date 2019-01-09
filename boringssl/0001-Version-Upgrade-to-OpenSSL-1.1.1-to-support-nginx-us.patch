@@ -1,8 +1,8 @@
-From 570840023c04c0bb91f99f85b72181b8ec067da6 Mon Sep 17 00:00:00 2001
+From 5396eaa336e5232c4ee596e7100d8f7ae949d6a5 Mon Sep 17 00:00:00 2001
 From: lrinQVQ <cqlrin@gmail.com>
 Date: Wed, 9 Jan 2019 16:31:38 +0800
-Subject: [PATCH 2/3] [DO NOT MERGE]Version: Upgrade to OpenSSL 1.1.1 to
- support nginx use tls1.3
+Subject: [PATCH 1/2] Version: Upgrade to OpenSSL 1.1.1 to support nginx use
+ tls1.3
 
 ---
  include/openssl/crypto.h | 2 +-
