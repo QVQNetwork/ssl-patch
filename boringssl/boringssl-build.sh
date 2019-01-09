@@ -1,6 +1,6 @@
 #!/bin/sh
 export WORKDIRECTORY=$PWD
-export ARCH=`uname -m`
+export ARCH=$(uname -m)
 if command -v git > /dev/null 2>&1; then
   echo "Checking git: OK"
 else
@@ -22,6 +22,10 @@ else
   exit 1
 fi
 
+if [ -d $WORKDIRECTORY/go ]; then
+export PATH=$WORKDIRECTORY/go/bin:$PATH
+export GOROOT=$WORKDIRECTORY/go
+else
 if [ -z $GOROOT ];then
 if [ "$ARCH" = "x86_64" ]; then
 GOURL=`curl -so- https://golang.org/dl/ | grep -oP 'https:\/\/dl\.google\.com\/go\/go([0-9\.]+)\.linux-amd64\.tar\.gz' | head -n 1`
@@ -42,19 +46,27 @@ rm -rf $WORKDIRECTORY/go.tar.gz
 export PATH=$WORKDIRECTORY/go/bin:$PATH
 export GOROOT=$WORKDIRECTORY/go
 fi
+fi
 
-NETWORK_CHECK=`curl -I -s --connect-timeout 5 https://github.com -w %{http_code} | tail -n1`
-
+NETWORK_CHECK=$(curl -I -s --connect-timeout 5 https://github.com -w %{http_code} | tail -n1)
+if [ -d $WORKDIRECTORY/boringssl ]; then
+cd $WORKDIRECTORY/boringssl
+git reset --hard remotes/origin/master
+git am $WORKDIRECTORY/*.patch
+rm -rf $WORKDIRECTORY/boringssl/boringssl/build
+rm -rf $WORKDIRECTORY/boringssl/boringssl/build2
+rm -rf $WORKDIRECTORY/boringssl/boringssl/.openssl
+else
 if [ "$NETWORK_CHECK" = "200" ]; then
-  git clone https://github.com/google/boringssl.git $WORKDIRECTORY/boringssl
+  git clone --depth 1 https://github.com/google/boringssl.git $WORKDIRECTORY/boringssl
+  cd $WORKDIRECTORY/boringssl
+  git am $WORKDIRECTORY/*.patch
 else
   echo "Unable to connect to GitHub, please check your Internet availability"
   exit 1
 fi
+fi
 
-cd $WORKDIRECTORY/boringssl
-git am $WORKDIRECTORY/0001-max-version-upgrade-to-tls1.3.patch
-git am $WORKDIRECTORY/0002-DO-NOT-MERGE-Version-Upgrade-to-OpenSSL-1.1.1-to-sup.patch
 mkdir $WORKDIRECTORY/boringssl/build
 cd $WORKDIRECTORY/boringssl/build
 cmake .. -DCMAKE_BUILD_TYPE=Release
