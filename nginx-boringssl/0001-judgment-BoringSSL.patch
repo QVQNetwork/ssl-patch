@@ -1,0 +1,32 @@
+From cab666748e5994346a1f3d4b6f26abe0efece5a8 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <cqlrin@gmail.com>
+Date: Sat, 12 Jan 2019 05:23:51 +0800
+Subject: [PATCH] judgment BoringSSL
+
+---
+ auto/lib/openssl/make | 9 +++++----
+ 1 file changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/auto/lib/openssl/make b/auto/lib/openssl/make
+index 126a2387..82b7eaec 100644
+--- a/auto/lib/openssl/make
++++ b/auto/lib/openssl/make
+@@ -50,10 +50,11 @@ END
+ 
+ $OPENSSL/.openssl/include/openssl/ssl.h:	$NGX_MAKEFILE
+ 	cd $OPENSSL \\
+-	&& if [ -f Makefile ]; then \$(MAKE) clean; fi \\
+-	&& ./config --prefix=$ngx_prefix no-shared no-threads $OPENSSL_OPT \\
+-	&& \$(MAKE) \\
+-	&& \$(MAKE) install_sw LIBDIR=lib
++	&& if [ -f include/openssl/is_boringssl.h ]; then touch .openssl/include/openssl/ssl.h; fi \\
++	&& if [ -f Makefile ] || [ ! -f include/openssl/is_boringssl.h ]; then \$(MAKE) clean; fi \\
++	&& if [ ! -f include/openssl/is_boringssl.h ]; then ./config --prefix=$ngx_prefix no-shared no-threads $OPENSSL_OPT; fi \\
++	&& if [ ! -f include/openssl/is_boringssl.h ]; then \$(MAKE); fi \\
++	&& if [ ! -f include/openssl/is_boringssl.h ]; then \$(MAKE) install_sw LIBDIR=lib; fi
+ 
+ END
+ 
+-- 
+2.11.0
+

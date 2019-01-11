@@ -1,6 +1,6 @@
 #!/bin/sh
-export WORKDIRECTORY=$PWD
-export ARCH=$(uname -m)
+WORKDIRECTORY=$PWD
+ARCH=$(uname -m)
 if command -v git > /dev/null 2>&1; then
   echo "Checking git: OK"
 else
@@ -23,8 +23,11 @@ else
 fi
 
 if [ -d $WORKDIRECTORY/go ]; then
-export PATH=$WORKDIRECTORY/go/bin:$PATH
-export GOROOT=$WORKDIRECTORY/go
+PATH=$WORKDIRECTORY/go/bin:$PATH
+GOROOT=$WORKDIRECTORY/go
+if [ -z $GOROOT ];then
+NO_GOROOT_SYSTEM=true
+fi
 else
 if [ -z $GOROOT ];then
 if [ "$ARCH" = "x86_64" ]; then
@@ -39,23 +42,28 @@ fi
 if [ "$ARCH" = "armv7l" ]; then
 GOURL=`curl -so- https://golang.org/dl/ | grep -oP 'https:\/\/dl\.google\.com\/go\/go([0-9\.]+)\.linux-armv6l\.tar\.gz' | head -n 1`
 fi
+if [ "$ARCH" = "" ]; then
+echo "Your architecture is not supported"
+fi
 echo "Downloading golang"
 curl -so $WORKDIRECTORY/go.tar.gz $GOURL
 tar -xzf $WORKDIRECTORY/go.tar.gz
 rm -rf $WORKDIRECTORY/go.tar.gz
-export PATH=$WORKDIRECTORY/go/bin:$PATH
-export GOROOT=$WORKDIRECTORY/go
+PATH=$WORKDIRECTORY/go/bin:$PATH
+GOROOT=$WORKDIRECTORY/go
+NO_GOROOT_SYSTEM=true
 fi
 fi
 
 NETWORK_CHECK=$(curl -I -s --connect-timeout 5 https://github.com -w %{http_code} | tail -n1)
+
 if [ -d $WORKDIRECTORY/boringssl ]; then
 cd $WORKDIRECTORY/boringssl
 git reset --hard remotes/origin/master
 git am $WORKDIRECTORY/*.patch
-rm -rf $WORKDIRECTORY/boringssl/boringssl/build
-rm -rf $WORKDIRECTORY/boringssl/boringssl/build2
-rm -rf $WORKDIRECTORY/boringssl/boringssl/.openssl
+rm -rf $WORKDIRECTORY/boringssl/build
+rm -rf $WORKDIRECTORY/boringssl/build2
+rm -rf $WORKDIRECTORY/boringssl/.openssl
 else
 if [ "$NETWORK_CHECK" = "200" ]; then
   git clone --depth 1 https://github.com/google/boringssl.git $WORKDIRECTORY/boringssl
@@ -85,5 +93,14 @@ cp $WORKDIRECTORY/boringssl/build/crypto/libcrypto.a $WORKDIRECTORY/boringssl/.o
 cp $WORKDIRECTORY/boringssl/build/ssl/libssl.a $WORKDIRECTORY/boringssl/.openssl/lib/libssl.a
 cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
 cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
+
+echo "git am nginx-boringssl/*.patch in nginx source directory"
+echo "and"
 echo "Configure nginx with \"--with-openssl=$WORKDIRECTORY/boringssl\". Use nginx version >= 1.15 for best result."
-echo "Run \"touch $WORKDIRECTORY/boringssl/.openssl/include/openssl/ssl.h\" AFTER you encountered a build error"
+echo ""
+#if [ "$NO_GOROOT_SYSTEM" = "true" ]; then
+#echo "Runing"
+#echo "export PATH=$WORKDIRECTORY/go/bin:\$PATH"
+#echo "export GOROOT=$WORKDIRECTORY/go"
+#echo "If you want to compile nginx"
+#fi
