@@ -1,0 +1,3 @@
+# Nginx 防止SSL嗅探
+
+此方案利用Nginx stream中的ssl_preread模块来识别ClientHello中的SNI信息,以防止SSL嗅探
