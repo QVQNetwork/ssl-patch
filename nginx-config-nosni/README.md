@@ -4,5 +4,7 @@
 This method uses the ssl_preread module in Nginx stream to identify the SNI information in ClientHello to prevent SSL sniffing.
 
 redirector.conf: include in main context (main {...})
+
 upstream.conf: include in redirector.conf (or stream context (stream{...})
+
 web_server.conf: your website configuration example
