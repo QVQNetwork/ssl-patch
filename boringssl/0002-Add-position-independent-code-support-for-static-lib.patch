@@ -1,0 +1,40 @@
+From 93d7921bfec1d5f6cf8005d59dcd784c85bf61e4 Mon Sep 17 00:00:00 2001
+From: lrinQVQ <lrin@qvq.network>
+Date: Wed, 31 Jul 2019 03:49:17 +0200
+Subject: [PATCH 2/2] Add position-independent code support for static library
+
+Signed-off-by: lrinQVQ <lrin@qvq.network>
+---
+ .gitignore     | 2 ++
+ CMakeLists.txt | 2 +-
+ 2 files changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/.gitignore b/.gitignore
+index 69ae265ee..864e8e590 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,6 +1,8 @@
+ build/
+ build2/
++build3/
+ .openssl/
++lib/
+ ssl/test/runner/runner
+ *.pyc
+ *.swp
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c3992a93d..53792abfe 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -280,7 +280,7 @@ endif()
+ 
+ add_definitions(-DBORINGSSL_IMPLEMENTATION)
+ 
+-if(BUILD_SHARED_LIBS)
++if(BUILD_SHARED_LIBS OR BUILD_PIC)
+   add_definitions(-DBORINGSSL_SHARED_LIBRARY)
+   # Enable position-independent code globally. This is needed because
+   # some library targets are OBJECT libraries.
+-- 
+2.23.0-rc0
+
