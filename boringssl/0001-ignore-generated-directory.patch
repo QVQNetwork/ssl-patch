@@ -1,6 +1,6 @@
-From 08724720c28a35eced91d9d94f0175fd6ccc31a1 Mon Sep 17 00:00:00 2001
+From 967c7467dcaa737dd85a557fb362d0b4fc799a73 Mon Sep 17 00:00:00 2001
 From: lrinQVQ <lrin@qvq.network>
-Date: Wed, 31 Jul 2019 03:43:55 +0200
+Date: Mon, 23 Dec 2019 08:34:13 -0500
 Subject: [PATCH 1/2] ignore generated directory
 
 Signed-off-by: lrinQVQ <lrin@qvq.network>
@@ -9,16 +9,16 @@ Signed-off-by: lrinQVQ <lrin@qvq.network>
  1 file changed, 2 insertions(+)
 
 diff --git a/.gitignore b/.gitignore
-index 366feb7f6..69ae265ee 100644
+index 8ce23d1ca..a8581a591 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -1,4 +1,6 @@
  build/
 +build2/
 +.openssl/
+ build32/
+ build64/
  ssl/test/runner/runner
- *.pyc
- *.swp
 -- 
-2.23.0-rc0
+2.24.1
 

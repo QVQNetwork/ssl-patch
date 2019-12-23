@@ -1,6 +1,6 @@
-From 93d7921bfec1d5f6cf8005d59dcd784c85bf61e4 Mon Sep 17 00:00:00 2001
+From 0d6aa9354c9dac29caad055f6aa035c586afaafb Mon Sep 17 00:00:00 2001
 From: lrinQVQ <lrin@qvq.network>
-Date: Wed, 31 Jul 2019 03:49:17 +0200
+Date: Mon, 23 Dec 2019 08:36:43 -0500
 Subject: [PATCH 2/2] Add position-independent code support for static library
 
 Signed-off-by: lrinQVQ <lrin@qvq.network>
@@ -10,7 +10,7 @@ Signed-off-by: lrinQVQ <lrin@qvq.network>
  2 files changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/.gitignore b/.gitignore
-index 69ae265ee..864e8e590 100644
+index a8581a591..0eb512b5e 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -1,6 +1,8 @@
@@ -19,14 +19,14 @@ index 69ae265ee..864e8e590 100644
 +build3/
  .openssl/
 +lib/
+ build32/
+ build64/
  ssl/test/runner/runner
- *.pyc
- *.swp
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c3992a93d..53792abfe 100644
+index 75bf9981b..c059f7a62 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -280,7 +280,7 @@ endif()
+@@ -296,7 +296,7 @@ endif()
  
  add_definitions(-DBORINGSSL_IMPLEMENTATION)
  
@@ -36,5 +36,5 @@ index c3992a93d..53792abfe 100644
    # Enable position-independent code globally. This is needed because
    # some library targets are OBJECT libraries.
 -- 
-2.23.0-rc0
+2.24.1
 
