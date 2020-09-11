@@ -59,7 +59,8 @@ NETWORK_CHECK=$(curl -I -s --connect-timeout 5 https://github.com -w %{http_code
 
 if [ -d $WORKDIRECTORY/boringssl ]; then
 cd $WORKDIRECTORY/boringssl
-git reset --hard remotes/origin/master
+git reset --hard origin master
+git pull --force
 git am $WORKDIRECTORY/*.patch
 rm -rf $WORKDIRECTORY/boringssl/build
 rm -rf $WORKDIRECTORY/boringssl/build2
@@ -85,24 +86,17 @@ cd $WORKDIRECTORY/boringssl/build2
 echo "Building Shared objects"
 cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=1
 make -j`nproc`
-mkdir $WORKDIRECTORY/boringssl/build3
-cd $WORKDIRECTORY/boringssl/build3
-echo "Building Static libraries with PIC"
-cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_PIC=1
-make -j`nproc`
 mkdir $WORKDIRECTORY/boringssl/.openssl
 mkdir $WORKDIRECTORY/boringssl/.openssl/include
 mkdir $WORKDIRECTORY/boringssl/.openssl/include/openssl
 cd $WORKDIRECTORY/boringssl/.openssl/include/openssl
 ln $WORKDIRECTORY/boringssl/include/openssl/* .
 mkdir $WORKDIRECTORY/boringssl/.openssl/lib
-mkdir $WORKDIRECTORY/boringssl/lib
+#mkdir $WORKDIRECTORY/boringssl/lib
 cp $WORKDIRECTORY/boringssl/build/crypto/libcrypto.a $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.a
 cp $WORKDIRECTORY/boringssl/build/ssl/libssl.a $WORKDIRECTORY/boringssl/.openssl/lib/libssl.a
-cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
-cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
-cp $WORKDIRECTORY/boringssl/build3/crypto/libcrypto.a $WORKDIRECTORY/boringssl/lib/libcrypto.a
-cp $WORKDIRECTORY/boringssl/build3/ssl/libssl.a $WORKDIRECTORY/boringssl/lib/libssl.a
+#cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
+#cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
 
 echo "If you want to compile nginx"
 echo "git am nginx-boringssl/*.patch in nginx source directory"
