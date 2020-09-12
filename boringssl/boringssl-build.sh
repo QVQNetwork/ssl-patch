@@ -92,11 +92,11 @@ mkdir $WORKDIRECTORY/boringssl/.openssl/include/openssl
 cd $WORKDIRECTORY/boringssl/.openssl/include/openssl
 ln $WORKDIRECTORY/boringssl/include/openssl/* .
 mkdir $WORKDIRECTORY/boringssl/.openssl/lib
-#mkdir $WORKDIRECTORY/boringssl/lib
+mkdir $WORKDIRECTORY/boringssl/lib
 cp $WORKDIRECTORY/boringssl/build/crypto/libcrypto.a $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.a
 cp $WORKDIRECTORY/boringssl/build/ssl/libssl.a $WORKDIRECTORY/boringssl/.openssl/lib/libssl.a
-#cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
-#cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
+cp $WORKDIRECTORY/boringssl/build2/crypto/libcrypto.so $WORKDIRECTORY/boringssl/.openssl/lib/libcrypto.so
+cp $WORKDIRECTORY/boringssl/build2/ssl/libssl.so $WORKDIRECTORY/boringssl/.openssl/lib/libssl.so
 
 echo "If you want to compile nginx"
 echo "git am nginx-boringssl/*.patch in nginx source directory"
