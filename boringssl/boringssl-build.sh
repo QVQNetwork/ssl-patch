@@ -59,6 +59,7 @@ NETWORK_CHECK=$(curl -I -s --connect-timeout 5 https://github.com -w %{http_code
 
 if [ -d $WORKDIRECTORY/boringssl ]; then
 cd $WORKDIRECTORY/boringssl
+git pull
 git reset --hard origin/master
 git am $WORKDIRECTORY/*.patch
 rm -rf $WORKDIRECTORY/boringssl/build
