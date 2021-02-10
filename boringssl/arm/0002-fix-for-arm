@@ -1,0 +1,72 @@
+From 12e7f1ec68625bb8a4ef1c1794aaba115ccdd1f4 Mon Sep 17 00:00:00 2001
+From: lrin <lrin@qvq.network>
+Date: Wed, 10 Feb 2021 10:40:55 +0100
+Subject: [PATCH] fix for arm
+
+---
+ crypto/cipher_extra/aead_test.cc    | 14 +++++++-------
+ crypto/fipsmodule/modes/gcm_test.cc |  2 +-
+ 2 files changed, 8 insertions(+), 8 deletions(-)
+
+diff --git a/crypto/cipher_extra/aead_test.cc b/crypto/cipher_extra/aead_test.cc
+index bf02e78..67abdd3 100644
+--- a/crypto/cipher_extra/aead_test.cc
++++ b/crypto/cipher_extra/aead_test.cc
+@@ -619,10 +619,10 @@ TEST_P(PerAEADTest, AliasedBuffers) {
+ }
+ 
+ TEST_P(PerAEADTest, UnalignedInput) {
+-  alignas(16) uint8_t key[EVP_AEAD_MAX_KEY_LENGTH + 1];
+-  alignas(16) uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH + 1];
+-  alignas(16) uint8_t plaintext[32 + 1];
+-  alignas(16) uint8_t ad[32 + 1];
++  alignas(8) uint8_t key[EVP_AEAD_MAX_KEY_LENGTH + 1];
++  alignas(8) uint8_t nonce[EVP_AEAD_MAX_NONCE_LENGTH + 1];
++  alignas(8) uint8_t plaintext[32 + 1];
++  alignas(8) uint8_t ad[32 + 1];
+   OPENSSL_memset(key, 'K', sizeof(key));
+   OPENSSL_memset(nonce, 'N', sizeof(nonce));
+   OPENSSL_memset(plaintext, 'P', sizeof(plaintext));
+@@ -641,7 +641,7 @@ TEST_P(PerAEADTest, UnalignedInput) {
+   ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+       ctx.get(), aead(), key + 1, key_len, EVP_AEAD_DEFAULT_TAG_LENGTH,
+       evp_aead_seal));
+-  alignas(16) uint8_t ciphertext[sizeof(plaintext) + EVP_AEAD_MAX_OVERHEAD];
++  alignas(8) uint8_t ciphertext[sizeof(plaintext) + EVP_AEAD_MAX_OVERHEAD];
+   size_t ciphertext_len;
+   ASSERT_TRUE(EVP_AEAD_CTX_seal(ctx.get(), ciphertext + 1, &ciphertext_len,
+                                 sizeof(ciphertext) - 1, nonce + 1, nonce_len,
+@@ -649,7 +649,7 @@ TEST_P(PerAEADTest, UnalignedInput) {
+                                 ad_len));
+ 
+   // It must successfully decrypt.
+-  alignas(16) uint8_t out[sizeof(ciphertext)];
++  alignas(8) uint8_t out[sizeof(ciphertext)];
+   ctx.Reset();
+   ASSERT_TRUE(EVP_AEAD_CTX_init_with_direction(
+       ctx.get(), aead(), key + 1, key_len, EVP_AEAD_DEFAULT_TAG_LENGTH,
+@@ -706,7 +706,7 @@ TEST_P(PerAEADTest, InvalidNonceLength) {
+   static const uint8_t kZeros[EVP_AEAD_MAX_KEY_LENGTH] = {0};
+   const size_t ad_len = RequiredADLength(GetParam().flags) != 0
+                             ? RequiredADLength(GetParam().flags)
+-                            : 16;
++                            : 8;
+   ASSERT_LE(ad_len, sizeof(kZeros));
+ 
+   for (size_t nonce_len : nonce_lens) {
+diff --git a/crypto/fipsmodule/modes/gcm_test.cc b/crypto/fipsmodule/modes/gcm_test.cc
+index 031b06c..23b123d 100644
+--- a/crypto/fipsmodule/modes/gcm_test.cc
++++ b/crypto/fipsmodule/modes/gcm_test.cc
+@@ -134,7 +134,7 @@ TEST(GCMTest, ABI) {
+       UINT64_C(0xf328c2b971b2fe78),
+   };
+ 
+-  alignas(16) u128 Htable[16];
++  alignas(8) u128 Htable[8];
+ #if defined(GHASH_ASM_X86) || defined(GHASH_ASM_X86_64)
+   if (gcm_ssse3_capable()) {
+     CHECK_ABI_SEH(gcm_init_ssse3, Htable, kH);
+-- 
+2.20.1
+
