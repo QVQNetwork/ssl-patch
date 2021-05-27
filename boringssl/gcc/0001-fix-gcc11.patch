@@ -1,11 +1,12 @@
-From dd6bac322864c31752d5978eb505fed36bb408be Mon Sep 17 00:00:00 2001
+From c4d4e3965533ecfa43c1a824f97099eccab107b8 Mon Sep 17 00:00:00 2001
 From: lrinQVQ <lrin@qvq.network>
-Date: Sat, 22 May 2021 02:14:46 -0400
+Date: Thu, 27 May 2021 14:02:38 -0400
 Subject: [PATCH] fix gcc11
 
 ---
- CMakeLists.txt | 2 +-
- 1 file changed, 1 insertion(+), 1 deletion(-)
+ CMakeLists.txt                 | 2 +-
+ crypto/curve25519/curve25519.c | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index 893bca7..5b17ee4 100644
@@ -20,6 +21,36 @@ index 893bca7..5b17ee4 100644
    if(MSVC)
      # clang-cl sets different default warnings than clang. It also treats -Wall
      # as -Weverything, to match MSVC. Instead -W3 is the alias for -Wall.
+diff --git a/crypto/curve25519/curve25519.c b/crypto/curve25519/curve25519.c
+index 232f6e0..8af3505 100644
+--- a/crypto/curve25519/curve25519.c
++++ b/crypto/curve25519/curve25519.c
+@@ -151,14 +151,14 @@ typedef uint32_t fe_limb_t;
+ OPENSSL_STATIC_ASSERT(sizeof(fe) == sizeof(fe_limb_t) * FE_NUM_LIMBS,
+                       "fe_limb_t[FE_NUM_LIMBS] is inconsistent with fe");
+ 
+-static void fe_frombytes_strict(fe *h, const uint8_t s[32]) {
++static void fe_frombytes_strict(fe *h, const uint8_t *s) {
+   // |fiat_25519_from_bytes| requires the top-most bit be clear.
+   assert((s[31] & 0x80) == 0);
+   fiat_25519_from_bytes(h->v, s);
+   assert_fe(h->v);
+ }
+ 
+-static void fe_frombytes(fe *h, const uint8_t s[32]) {
++static void fe_frombytes(fe *h, const uint8_t *s) {
+   uint8_t s_copy[32];
+   OPENSSL_memcpy(s_copy, s, 32);
+   s_copy[31] &= 0x7f;
+@@ -500,7 +500,7 @@ static void ge_p3_tobytes(uint8_t s[32], const ge_p3 *h) {
+   s[31] ^= fe_isnegative(&x) << 7;
+ }
+ 
+-int x25519_ge_frombytes_vartime(ge_p3 *h, const uint8_t s[32]) {
++int x25519_ge_frombytes_vartime(ge_p3 *h, const uint8_t *s) {
+   fe u;
+   fe_loose v;
+   fe v3;
 -- 
 2.31.1
 
