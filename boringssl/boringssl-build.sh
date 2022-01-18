@@ -31,16 +31,16 @@ fi
 else
 if [ -z $GOROOT ];then
 if [ "$ARCH" = "x86_64" ]; then
-GOURL="https://dl.google.com/go/$(curl https://golang.org/VERSION?m=text).linux-amd64.tar.gz"
+GOURL="https://dl.google.com/go/$(curl -L https://golang.org/VERSION?m=text).linux-amd64.tar.gz"
 fi
 if [ "$ARCH" = "i386" ]; then
-GOURL="https://dl.google.com/go/$(curl https://golang.org/VERSION?m=text).linux-386.tar.gz"
+GOURL="https://dl.google.com/go/$(curl -L https://golang.org/VERSION?m=text).linux-386.tar.gz"
 fi
 if [ "$ARCH" = "armv6l" ]; then
-GOURL="https://dl.google.com/go/$(curl https://golang.org/VERSION?m=text).linux-armv6l.tar.gz"
+GOURL="https://dl.google.com/go/$(curl -L https://golang.org/VERSION?m=text).linux-armv6l.tar.gz"
 fi
 if [ "$ARCH" = "armv7l" ]; then
-GOURL="https://dl.google.com/go/$(curl https://golang.org/VERSION?m=text).linux-armv6l.tar.gz"
+GOURL="https://dl.google.com/go/$(curl -L https://golang.org/VERSION?m=text).linux-armv6l.tar.gz"
 fi
 if [ "$ARCH" = "" ]; then
 echo "Your architecture is not supported"
